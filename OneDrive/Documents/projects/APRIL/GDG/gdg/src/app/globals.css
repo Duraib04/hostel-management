@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f1e3;
+  --foreground: #1f222b;
+  --surface: #fffaf0;
+  --surface-strong: #ffe6cc;
+  --primary: #a33e2b;
+  --primary-strong: #7a2e20;
+  --accent: #0f6a66;
+  --muted: #5e5f62;
+  --ring: #d79b70;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-manrope);
+  --font-display: var(--font-playfair-display);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), sans-serif;
+  background-image: radial-gradient(
+      circle at 10% 20%,
+      rgba(163, 62, 43, 0.12),
+      transparent 24%
+    ),
+    radial-gradient(circle at 90% 10%, rgba(15, 106, 102, 0.14), transparent 20%),
+    linear-gradient(180deg, #f7f1e3 0%, #f5e8cf 100%);
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-playfair-display), serif;
+  letter-spacing: 0.01em;
+}
+
+.soft-card {
+  background: color-mix(in oklab, var(--surface) 88%, white 12%);
+  border: 1px solid color-mix(in oklab, var(--ring) 30%, white 70%);
+  border-radius: 1.25rem;
+  box-shadow: 0 12px 30px rgba(59, 40, 25, 0.08);
+}
+
+.stat-pill {
+  border: 1px solid rgba(163, 62, 43, 0.25);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary-strong);
+  background: rgba(255, 245, 236, 0.75);
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1.2fr 1fr;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: riseIn 0.65s ease-out both;
+}
