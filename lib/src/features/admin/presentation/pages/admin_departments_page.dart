@@ -50,6 +50,16 @@ class _AdminDepartmentsPageState extends State<AdminDepartmentsPage> {
                         child: Text(d['departmentCode'] as String? ?? '', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14))),
                       const SizedBox(width: 12),
                       Expanded(child: Text(d['departmentName'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textDark))),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                        tooltip: 'Edit Department',
+                        onPressed: () => _showEditDeptDialog(context, ds, d),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                        tooltip: 'Delete Department',
+                        onPressed: () => _confirmDeleteDept(context, ds, d['departmentId'] as String, d['departmentName'] as String? ?? ''),
+                      ),
                     ]),
                     const SizedBox(height: 12),
                     Row(children: [
@@ -100,5 +110,155 @@ class _AdminDepartmentsPageState extends State<AdminDepartmentsPage> {
         ),
       ],
     ));
+  }
+
+  void _showEditDeptDialog(BuildContext context, DataService ds, Map<String, dynamic> dept) {
+    final nameC = TextEditingController(text: dept['departmentName'] as String? ?? '');
+    final codeC = TextEditingController(text: dept['departmentCode'] as String? ?? '');
+    String selectedHodId = dept['hodId'] as String? ?? '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setDialogState) {
+          final hodOptions = ds.faculty;
+          final hasCurrentHod = selectedHodId.isNotEmpty && hodOptions.any((f) => f['facultyId'] == selectedHodId);
+
+          return AlertDialog(
+            backgroundColor: AppColors.surface,
+            title: const Text('Edit Department', style: TextStyle(color: AppColors.textDark)),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextField(
+                  controller: nameC,
+                  decoration: const InputDecoration(labelText: 'Department Name', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: codeC,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(labelText: 'Department Code', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: hasCurrentHod ? selectedHodId : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'HOD Assignment',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('Not Assigned')),
+                    ...hodOptions.map((f) {
+                      final facultyId = f['facultyId'] as String? ?? '';
+                      final facultyName = f['name'] as String? ?? facultyId;
+                      return DropdownMenuItem(
+                        value: facultyId,
+                        child: Text('$facultyName ($facultyId)', overflow: TextOverflow.ellipsis),
+                      );
+                    }),
+                  ],
+                  onChanged: (v) => setDialogState(() => selectedHodId = v ?? ''),
+                ),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                onPressed: () {
+                  final name = nameC.text.trim();
+                  final code = codeC.text.trim().toUpperCase();
+                  if (name.isEmpty || code.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Department name and code are required'), backgroundColor: Colors.red),
+                    );
+                    return;
+                  }
+
+                  ds.updateDepartment(
+                    dept['departmentId'] as String,
+                    {
+                      'departmentName': name,
+                      'departmentCode': code,
+                      'hodId': selectedHodId,
+                    },
+                  );
+                  Navigator.pop(ctx);
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('$name department updated'),
+                      backgroundColor: AppColors.secondary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  );
+                },
+                child: const Text('Save Changes'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _confirmDeleteDept(BuildContext context, DataService ds, String departmentId, String departmentName) {
+    final facCount = ds.getDepartmentFaculty(departmentId).length;
+    final stuCount = ds.getDepartmentStudents(departmentId).length;
+    final canDelete = facCount == 0 && stuCount == 0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete Department', style: TextStyle(color: AppColors.textDark)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete "$departmentName"?',
+              style: const TextStyle(color: AppColors.textDark, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            if (!canDelete) ...
+              [
+                Text(
+                  'This department has $facCount faculty and $stuCount students linked. Remove all associations before deletion.',
+                  style: const TextStyle(color: Colors.orange, fontSize: 13),
+                ),
+              ]
+            else
+              const Text(
+                'This action cannot be undone.',
+                style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          if (canDelete)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+              onPressed: () {
+                ds.deleteDepartment(departmentId);
+                Navigator.pop(ctx);
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$departmentName deleted'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              },
+              child: const Text('Delete'),
+            ),
+        ],
+      ),
+    );
   }
 }

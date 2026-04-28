@@ -519,105 +519,6 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> with 
     }
   }
 
-    void _showChangeIdDialog(int index) {
-      final user = _allUsers[index];
-      final oldUserId = user['userId'] as String? ?? '';
-      final newIdCtrl = TextEditingController();
-    
-      showDialog(context: context, builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(children: [
-          Icon(Icons.edit_attributes, color: AppColors.primary, size: 22),
-          const SizedBox(width: 10),
-          const Text('Change User ID', style: TextStyle(color: AppColors.textDark, fontSize: 17, fontWeight: FontWeight.w600)),
-        ]),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 400, minWidth: MediaQuery.of(ctx).size.width < 500 ? MediaQuery.of(ctx).size.width * 0.85 : 400),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Current ID: $oldUserId', style: const TextStyle(color: AppColors.textMedium, fontSize: 13)),
-            const SizedBox(height: 16),
-            Text('User: ${user['name'] ?? 'Unknown'}', style: const TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 16),
-            _dialogField('New User ID', newIdCtrl),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFFFF9800).withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-              child: const Row(children: [
-                Icon(Icons.warning, size: 18, color: Color(0xFFFF9800)),
-                SizedBox(width: 8),
-                Expanded(child: Text(
-                  'This will update the ID everywhere including records and accounts',
-                  style: TextStyle(color: Color(0xFFFF9800), fontSize: 12),
-                )),
-              ]),
-            ),
-          ]),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textLight))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            onPressed: () {
-              final newUserId = newIdCtrl.text.trim();
-              if (newUserId.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('New ID cannot be empty'), backgroundColor: Colors.red));
-                return;
-              }
-              if (newUserId == oldUserId) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('New ID is same as old ID'), backgroundColor: Colors.red));
-                return;
-              }
-              final ds = Provider.of<DataService>(context, listen: false);
-              if (ds.users.any((u) => u['id'] == newUserId)) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User ID "$newUserId" already exists'), backgroundColor: Colors.red));
-                return;
-              }
-              _changeUserIdCascade(ds, oldUserId, newUserId);
-              _loadUsers();
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('User ID changed from $oldUserId to $newUserId'), backgroundColor: const Color(0xFF4CAF50)));
-            },
-            child: const Text('Change ID'),
-          ),
-        ],
-      ));
-    }
-
-    void _changeUserIdCascade(DataService ds, String oldId, String newId) {
-      final userIdx = ds.users.indexWhere((u) => u['id'] == oldId);
-      if (userIdx >= 0) {
-        ds.users[userIdx]['id'] = newId;
-      }
-    
-      final studentIdx = ds.students.indexWhere((s) => s['studentId'] == oldId);
-      if (studentIdx >= 0) {
-        ds.students[studentIdx]['studentId'] = newId;
-      }
-    
-      final facultyIdx = ds.faculty.indexWhere((f) => f['facultyId'] == oldId);
-      if (facultyIdx >= 0) {
-        ds.faculty[facultyIdx]['facultyId'] = newId;
-        for (final mentor in ds.mentorAssignments) {
-          if (mentor['mentorId'] == oldId) {
-            mentor['mentorId'] = newId;
-          }
-        }
-      }
-    
-      for (final student in ds.students) {
-        if (student['mentorId'] == oldId) {
-          student['mentorId'] = newId;
-        }
-        if (student['classAdviserId'] == oldId) {
-          student['classAdviserId'] = newId;
-        }
-      }
-    
-      ds.notifyListeners();
-    }
   Widget _dialogField(String label, TextEditingController ctrl, {bool obscure = false, bool enabled = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1137,7 +1038,6 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> with 
                   _actionBtn(Icons.pause_circle, 'Suspend', const Color(0xFFFF9800), () => _changeStatus(origIdx, 'suspended')),
                   _actionBtn(Icons.block, 'Terminate', const Color(0xFFEF5350), () => _changeStatus(origIdx, 'terminated')),
                   _actionBtn(Icons.play_circle, 'Activate', const Color(0xFF4CAF50), () => _changeStatus(origIdx, 'active')),
-                    _actionBtn(Icons.edit_attributes, 'Change ID', const Color(0xFF9C27B0), () => _showChangeIdDialog(origIdx)),
                   _actionBtn(Icons.delete_forever, 'Remove', Colors.red, () => _deleteUser(origIdx)),
                 ])),
               ]);
